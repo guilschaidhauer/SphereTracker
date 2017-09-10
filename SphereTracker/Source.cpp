@@ -1,117 +1,85 @@
+//#include <opencv2\cv>
+
+//#include <opencv\cvaux>;
+//#include <opencv/highgui>;
+//#include <opencv/cxcore>;
+//#include <stdio>;
+//#include <stdio>;
+//#include <stdlib>;
+//#include <string>;
+//#include <assert>;
+//#include <math>;
+//#include <float>;
+//#include <limits>;
+//#include <time>;
+//#include <ctype>;
+
 #include <iostream>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-using namespace cv;
-using namespace std;
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
-	VideoCapture cap(0); //capture the video from webcam
-
-	if (!cap.isOpened())  // if not success, exit program
+	// Default capture size - 640x480
+	CvSize size = cvSize(640, 480);
+	// Open capture device. 0 is /dev/video0, 1 is /dev/video1, etc.
+	CvCapture* capture = cvCaptureFromCAM(0);
+	if (!capture)
 	{
-		cout << "Cannot open the web cam" << endl;
+		fprintf(stderr, "ERROR: capture is NULL \n");
+		getchar();
 		return -1;
 	}
-
-	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
-
-	int iLowH = 0;
-	int iHighH = 179;
-
-	int iLowS = 108;
-	int iHighS = 239;
-
-	int iLowV = 164;
-	int iHighV = 255;
-
-	//Create trackbars in "Control" window
-	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
-	createTrackbar("HighH", "Control", &iHighH, 179);
-
-	createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
-	createTrackbar("HighS", "Control", &iHighS, 255);
-
-	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
-	createTrackbar("HighV", "Control", &iHighV, 255);
-
-	int iLastX = -1;
-	int iLastY = -1;
-
-	//Capture a temporary image from the camera
-	Mat imgTmp;
-	cap.read(imgTmp);
-
-	//Create a black image with the size as the camera output
-	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
-
-
-	while (true)
+	// Create a window in which the captured images will be presented
+	cvNamedWindow("Camera", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("HSV", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("EdgeDetection", CV_WINDOW_AUTOSIZE);
+	// Detect a red ball
+	CvScalar hsv_min = cvScalar(150, 84, 130, 0);
+	CvScalar hsv_max = cvScalar(358, 256, 255, 0);
+	IplImage *  hsv_frame = cvCreateImage(size, IPL_DEPTH_8U, 3);
+	IplImage*  thresholded = cvCreateImage(size, IPL_DEPTH_8U, 1);
+	while (1)
 	{
-		Mat imgOriginal;
-
-		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
-
-
-
-		if (!bSuccess) //if not success, break loop
+		// Get one frame
+		IplImage* frame = cvQueryFrame(capture);
+		if (!frame)
 		{
-			cout << "Cannot read a frame from video stream" << endl;
+			fprintf(stderr, "ERROR: frame is null...\n");
+			getchar();
 			break;
 		}
-
-		Mat imgHSV;
-
-		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
-
-		Mat imgThresholded;
-
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
-
-																									  //morphological opening (removes small objects from the foreground)
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
-		//morphological closing (removes small holes from the foreground)
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
-		//Calculate the moments of the thresholded image
-		Moments oMoments = moments(imgThresholded);
-
-		double dM01 = oMoments.m01;
-		double dM10 = oMoments.m10;
-		double dArea = oMoments.m00;
-
-		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-		if (dArea > 10000)
+		// Covert color space to HSV as it is much easier to filter colors in the HSV color-space.
+		cvCvtColor(frame, hsv_frame, CV_BGR2HSV);
+		// Filter out colors which are out of range.
+		cvInRangeS(hsv_frame, hsv_min, hsv_max, thresholded);
+		// Memory for hough circles
+		CvMemStorage* storage = cvCreateMemStorage(0);
+		// hough detector works better with some smoothing of the image
+		cvSmooth(thresholded, thresholded, CV_GAUSSIAN, 9, 9);
+		CvSeq* circles = cvHoughCircles(thresholded, storage, CV_HOUGH_GRADIENT, 2,
+			thresholded->height / 4, 100, 50, 10, 400);
+		for (int i = 0; i < circles->total; i++)
 		{
-			//calculate the position of the ball
-			int posX = dM10 / dArea;
-			int posY = dM01 / dArea;
-
-			if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
-			{
-				//Draw a red line from the previous point to the current point
-				line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
-			}
-
-			iLastX = posX;
-			iLastY = posY;
+			float* p = (float*)cvGetSeqElem(circles, i);
+			printf("Ball! x=%f y=%f r=%f\n\r", p[0], p[1], p[2]);
+			cvCircle(frame, cvPoint(cvRound(p[0]), cvRound(p[1])),
+				3, CV_RGB(0, 255, 0), -1, 8, 0);
+			cvCircle(frame, cvPoint(cvRound(p[0]), cvRound(p[1])),
+				cvRound(p[2]), CV_RGB(255, 0, 0), 3, 8, 0);
 		}
-
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
-
-		imgOriginal = imgOriginal + imgLines;
-		imshow("Original", imgOriginal); //show the original image
-
-		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
-		{
-			cout << "esc key is pressed by user" << endl;
-			break;
-		}
+		cvShowImage("Camera", frame); // Original stream with detected ball overlay
+		cvShowImage("HSV", hsv_frame); // Original stream in the HSV color space
+		cvShowImage("After Color Filtering", thresholded); // The stream after color filtering
+		cvReleaseMemStorage(&storage);
+		// Do not release the frame!
+		//If ESC key pressed, Key=0x10001B under OpenCV 0.9.7(linux version),
+		//remove higher bits using AND operator
+		if ((cvWaitKey(10) & 255) == 27) break;
 	}
-
+	// Release the capture device housekeeping
+	cvReleaseCapture(&capture);
+	cvDestroyWindow("mywindow");
 	return 0;
 }
