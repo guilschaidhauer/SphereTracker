@@ -1,141 +1,106 @@
-#include <iostream>
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+/**
+* @file HoughCircle_Demo.cpp
+* @brief Demo code for Hough Transform
+* @author OpenCV team
+*/
 
-using namespace cv;
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include <iostream>
+
 using namespace std;
+using namespace cv;
+
+namespace
+{
+	// windows and trackbars name
+	const std::string windowName = "Hough Circle Detection Demo";
+	const std::string cannyThresholdTrackbarName = "Canny threshold";
+	const std::string accumulatorThresholdTrackbarName = "Accumulator Threshold";
+	const std::string usage = "Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
+
+	// initial and max values of the parameters of interests.
+	const int cannyThresholdInitialValue = 100;
+	const int accumulatorThresholdInitialValue = 50;
+	const int maxAccumulatorThreshold = 200;
+	const int maxCannyThreshold = 255;
+
+	void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
+	{
+		// will hold the results of the detection
+		std::vector<Vec3f> circles;
+		// runs the actual detection
+		HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+
+		// clone the colour, input image for displaying purposes
+		Mat display = src_display.clone();
+		for (size_t i = 0; i < circles.size(); i++)
+		{
+			Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+			int radius = cvRound(circles[i][2]);
+			// circle center
+			circle(display, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+			// circle outline
+			circle(display, center, radius, Scalar(0, 0, 255), 3, 8, 0);
+		}
+
+		// shows the results
+		imshow(windowName, display);
+	}
+}
+
 
 int main(int argc, char** argv)
 {
-	VideoCapture cap(0); //capture the video from webcam
+	Mat src, src_gray;
 
-	if (!cap.isOpened())  // if not success, exit program
+	// Read the image
+	String imageName("board.jpg"); // by default
+	if (argc > 1)
 	{
-		cout << "Cannot open the web cam" << endl;
+		imageName = argv[1];
+	}
+	src = imread(imageName, IMREAD_COLOR);
+
+	if (src.empty())
+	{
+		std::cerr << "Invalid input image\n";
+		std::cout << usage;
 		return -1;
 	}
 
-	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
+	// Convert it to gray
+	cvtColor(src, src_gray, COLOR_BGR2GRAY);
 
-	int iLowH = 0;
-	int iHighH = 179;
+	// Reduce the noise so we avoid false circle detection
+	GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
 
-	int iLowS = 108;
-	int iHighS = 239;
+	//declare and initialize both parameters that are subjects to change
+	int cannyThreshold = cannyThresholdInitialValue;
+	int accumulatorThreshold = accumulatorThresholdInitialValue;
 
-	int iLowV = 164;
-	int iHighV = 255;
+	// create the main window, and attach the trackbars
+	namedWindow(windowName, WINDOW_AUTOSIZE);
+	createTrackbar(cannyThresholdTrackbarName, windowName, &cannyThreshold, maxCannyThreshold);
+	createTrackbar(accumulatorThresholdTrackbarName, windowName, &accumulatorThreshold, maxAccumulatorThreshold);
 
-	//Create trackbars in "Control" window
-	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
-	createTrackbar("HighH", "Control", &iHighH, 179);
-
-	createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
-	createTrackbar("HighS", "Control", &iHighS, 255);
-
-	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
-	createTrackbar("HighV", "Control", &iHighV, 255);
-
-	int iLastX = -1;
-	int iLastY = -1;
-
-	//Capture a temporary image from the camera
-	Mat imgTmp;
-	cap.read(imgTmp);
-
-	//Create a black image with the size as the camera output
-	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
-
-	Mat cimg;
-
-
-	while (true)
+	// infinite loop to display
+	// and refresh the content of the output image
+	// until the user presses q or Q
+	char key = 0;
+	while (key != 'q' && key != 'Q')
 	{
-		Mat imgOriginal;
+		// those paramaters cannot be =0
+		// so we must check here
+		cannyThreshold = std::max(cannyThreshold, 1);
+		accumulatorThreshold = std::max(accumulatorThreshold, 1);
 
-		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
+		//runs the detection, and update the display
+		HoughDetection(src_gray, src, cannyThreshold, accumulatorThreshold);
 
-
-
-		if (!bSuccess) //if not success, break loop
-		{
-			cout << "Cannot read a frame from video stream" << endl;
-			break;
-		}
-
-		Mat imgHSV;
-
-		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
-
-		Mat imgThresholded;
-
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
-
-																									  //morphological opening (removes small objects from the foreground)
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
-		//morphological closing (removes small holes from the foreground)
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
-		//Calculate the moments of the thresholded image
-		Moments oMoments = moments(imgThresholded);
-		vector<Vec3f> circles;
-
-
-		double dM01 = oMoments.m01;
-		double dM10 = oMoments.m10;
-		double dArea = oMoments.m00;
-
-		//Storage for the circles
-		CvMemStorage* storage = cvCreateMemStorage(0);
-		//cvSmooth(&imgThresholded, &imgThresholded, CV_GAUSSIAN, 9, 9);
-
-		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-		if (dArea > 10000)
-		{
-			//calculate the position of the ball
-			int posX = dM10 / dArea;
-			int posY = dM01 / dArea;
-
-			HoughCircles(imgThresholded, circles, HOUGH_GRADIENT, 1, 10,
-				100, 30, 1, 200); // change the last two parameters
-							   // (min_radius & max_radius) to detect larger circles
-
-			//cvtColor(imgThresholded, cimg, COLOR_GRAY2BGR);
-
-			cout << circles.size() << endl;
-
-			for (size_t i = 0; i < circles.size(); i++)
-			{
-				Vec3i c = circles[i];
-				circle(cimg, Point(c[0], c[1]), c[2], Scalar(0, 0, 255), 3, LINE_AA);
-				circle(cimg, Point(c[0], c[1]), 2, Scalar(0, 255, 0), 3, LINE_AA);
-				cout << "Detected a circle" << endl;
-			}
-
-			/*if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
-			{
-				//Draw a red line from the previous point to the current point
-				line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
-			}*/
-
-			iLastX = posX;
-			iLastY = posY;
-		}
-
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
-
-		imgOriginal = imgOriginal + imgLines;
-		imshow("Original", imgOriginal); //show the original image
-		//imshow("detected circles", cimg);
-
-		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
-		{
-			cout << "esc key is pressed by user" << endl;
-			break;
-		}
+		// get user key
+		key = (char)waitKey(10);
 	}
 
 	return 0;
