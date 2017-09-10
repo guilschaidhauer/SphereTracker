@@ -46,6 +46,8 @@ int main(int argc, char** argv)
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
 
+	Mat cimg;
+
 
 	while (true)
 	{
@@ -79,10 +81,16 @@ int main(int argc, char** argv)
 
 		//Calculate the moments of the thresholded image
 		Moments oMoments = moments(imgThresholded);
+		vector<Vec3f> circles;
+
 
 		double dM01 = oMoments.m01;
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
+
+		//Storage for the circles
+		CvMemStorage* storage = cvCreateMemStorage(0);
+		//cvSmooth(&imgThresholded, &imgThresholded, CV_GAUSSIAN, 9, 9);
 
 		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
 		if (dArea > 10000)
@@ -91,11 +99,27 @@ int main(int argc, char** argv)
 			int posX = dM10 / dArea;
 			int posY = dM01 / dArea;
 
-			if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
+			HoughCircles(imgThresholded, circles, HOUGH_GRADIENT, 1, 10,
+				100, 30, 1, 200); // change the last two parameters
+							   // (min_radius & max_radius) to detect larger circles
+
+			//cvtColor(imgThresholded, cimg, COLOR_GRAY2BGR);
+
+			cout << circles.size() << endl;
+
+			for (size_t i = 0; i < circles.size(); i++)
+			{
+				Vec3i c = circles[i];
+				circle(cimg, Point(c[0], c[1]), c[2], Scalar(0, 0, 255), 3, LINE_AA);
+				circle(cimg, Point(c[0], c[1]), 2, Scalar(0, 255, 0), 3, LINE_AA);
+				cout << "Detected a circle" << endl;
+			}
+
+			/*if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
 			{
 				//Draw a red line from the previous point to the current point
 				line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
-			}
+			}*/
 
 			iLastX = posX;
 			iLastY = posY;
@@ -105,6 +129,7 @@ int main(int argc, char** argv)
 
 		imgOriginal = imgOriginal + imgLines;
 		imshow("Original", imgOriginal); //show the original image
+		//imshow("detected circles", cimg);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
