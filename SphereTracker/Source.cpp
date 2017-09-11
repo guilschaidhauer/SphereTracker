@@ -23,12 +23,12 @@ void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThresh
 	// will hold the results of the detection
 	std::vector<Vec3f> circles;
 	// runs the actual detection
-	//HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
-	HoughCircles(src_display, circles, HOUGH_GRADIENT, 1, src_display.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+	HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+	//HoughCircles(src_display, circles, HOUGH_GRADIENT, 1, src_display.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
 
 	// clone the colour, input image for displaying purposes
-	Mat display = src_display.clone();
-	//Mat display = src_gray.clone();
+	//Mat display = src_display.clone();
+	Mat display = src_gray.clone();
 
 
 	for (size_t i = 0; i < circles.size(); i++)
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 
 	while (true)
 	{
-		Mat imgOriginal, src_gray;
+		Mat imgOriginal, src_gray, src_sobel;
 
 		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
 
@@ -90,8 +90,21 @@ int main(int argc, char** argv)
 		// Reduce the noise so we avoid false circle detection
 		GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
 
+		Sobel(imgOriginal, src_sobel, CV_32F, 1, 0, 7);
+
+		double minVal, maxVal;
+		minMaxLoc(src_sobel, &minVal, &maxVal); //find minimum and maximum intensities
+		//cout << "minVal : " << minVal << endl << "maxVal : " << maxVal << endl;
+
+		Mat draw;
+		src_sobel.convertTo(draw, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
+
+		cvtColor(draw, draw, COLOR_BGR2GRAY);
+
 		//runs the detection, and update the display
-		HoughDetection(src_gray, imgOriginal, cannyThreshold, accumulatorThreshold);
+		HoughDetection(draw, imgOriginal, cannyThreshold, accumulatorThreshold);
+
+		imshow("Sobel", draw);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
