@@ -5,7 +5,12 @@
 using namespace cv;
 using namespace std;
 
+// windows and trackbars name
 const std::string windowName = "Hough Circle Detection Demo";
+const std::string cannyThresholdTrackbarName = "Canny threshold";
+const std::string accumulatorThresholdTrackbarName = "Accumulator Threshold";
+const std::string usage = "Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
+
 
 // initial and max values of the parameters of interests.
 const int cannyThresholdInitialValue = 100;
@@ -13,15 +18,17 @@ const int accumulatorThresholdInitialValue = 50;
 const int maxAccumulatorThreshold = 200;
 const int maxCannyThreshold = 255;
 
-void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
+void HoughDetection(const Mat& src_gray, const Mat& src_display, const Mat& hsv, int cannyThreshold, int accumulatorThreshold)
 {
 	// will hold the results of the detection
 	std::vector<Vec3f> circles;
 	// runs the actual detection
-	HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+	//HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+	HoughCircles(hsv, circles, HOUGH_GRADIENT, 1, hsv.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
 
 	// clone the colour, input image for displaying purposes
-	Mat display = src_display.clone();
+	Mat display = hsv.clone();
+
 	for (size_t i = 0; i < circles.size(); i++)
 	{
 		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
@@ -67,29 +74,28 @@ int main(int argc, char** argv)
 	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
 	createTrackbar("HighV", "Control", &iHighV, 255);
 
+	//declare and initialize both parameters that are subjects to change
+	int cannyThreshold = cannyThresholdInitialValue;
+	int accumulatorThreshold = accumulatorThresholdInitialValue;
+
+	// create the main window, and attach the trackbars
+	namedWindow(windowName, WINDOW_AUTOSIZE);
+	createTrackbar(cannyThresholdTrackbarName, windowName, &cannyThreshold, maxCannyThreshold);
+	createTrackbar(accumulatorThresholdTrackbarName, windowName, &accumulatorThreshold, maxAccumulatorThreshold);
+
 	int iLastX = -1;
 	int iLastY = -1;
 
 	//Capture a temporary image from the camera
-	Mat imgTmp, src_gray;
+	Mat imgTmp;
 	cap.read(imgTmp);
 
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
 
-	// Convert it to gray
-	cvtColor(imgTmp, src_gray, COLOR_BGR2GRAY);
-
-	// Reduce the noise so we avoid false circle detection
-	GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
-
-	//declare and initialize both parameters that are subjects to change
-	int cannyThreshold = cannyThresholdInitialValue;
-	int accumulatorThreshold = accumulatorThresholdInitialValue;
-
 	while (true)
 	{
-		Mat imgOriginal;
+		Mat imgOriginal, src_gray;
 
 		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
 
@@ -117,6 +123,12 @@ int main(int argc, char** argv)
 		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
+		// Convert it to gray
+		cvtColor(imgOriginal, src_gray, COLOR_BGR2GRAY);
+
+		// Reduce the noise so we avoid false circle detection
+		GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
+
 		//Calculate the moments of the thresholded image
 		Moments oMoments = moments(imgThresholded);
 
@@ -134,7 +146,7 @@ int main(int argc, char** argv)
 			if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
 			{
 				//Draw a red line from the previous point to the current point
-				line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
+				//line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
 			}
 
 			iLastX = posX;
@@ -145,6 +157,9 @@ int main(int argc, char** argv)
 
 		imgOriginal = imgOriginal + imgLines;
 		imshow("Original", imgOriginal); //show the original image
+
+		//runs the detection, and update the display
+		HoughDetection(src_gray, imgOriginal, imgThresholded,cannyThreshold, accumulatorThreshold);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
