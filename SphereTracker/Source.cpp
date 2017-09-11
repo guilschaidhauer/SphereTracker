@@ -5,6 +5,37 @@
 using namespace cv;
 using namespace std;
 
+const std::string windowName = "Hough Circle Detection Demo";
+
+// initial and max values of the parameters of interests.
+const int cannyThresholdInitialValue = 100;
+const int accumulatorThresholdInitialValue = 50;
+const int maxAccumulatorThreshold = 200;
+const int maxCannyThreshold = 255;
+
+void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
+{
+	// will hold the results of the detection
+	std::vector<Vec3f> circles;
+	// runs the actual detection
+	HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+
+	// clone the colour, input image for displaying purposes
+	Mat display = src_display.clone();
+	for (size_t i = 0; i < circles.size(); i++)
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+		// circle center
+		circle(display, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+		// circle outline
+		circle(display, center, radius, Scalar(0, 0, 255), 3, 8, 0);
+	}
+
+	// shows the results
+	imshow(windowName, display);
+}
+
 int main(int argc, char** argv)
 {
 	VideoCapture cap(0); //capture the video from webcam
@@ -40,12 +71,21 @@ int main(int argc, char** argv)
 	int iLastY = -1;
 
 	//Capture a temporary image from the camera
-	Mat imgTmp;
+	Mat imgTmp, src_gray;
 	cap.read(imgTmp);
 
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
 
+	// Convert it to gray
+	cvtColor(imgTmp, src_gray, COLOR_BGR2GRAY);
+
+	// Reduce the noise so we avoid false circle detection
+	GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
+
+	//declare and initialize both parameters that are subjects to change
+	int cannyThreshold = cannyThresholdInitialValue;
+	int accumulatorThreshold = accumulatorThresholdInitialValue;
 
 	while (true)
 	{
