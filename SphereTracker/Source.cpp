@@ -14,20 +14,22 @@ const std::string usage = "Usage : tutorial_HoughCircle_Demo <path_to_input_imag
 
 // initial and max values of the parameters of interests.
 const int cannyThresholdInitialValue = 100;
-const int accumulatorThresholdInitialValue = 50;
+const int accumulatorThresholdInitialValue = 45;
 const int maxAccumulatorThreshold = 200;
 const int maxCannyThreshold = 255;
 
-void HoughDetection(const Mat& src_gray, const Mat& src_display, const Mat& hsv, int cannyThreshold, int accumulatorThreshold)
+void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
 {
 	// will hold the results of the detection
 	std::vector<Vec3f> circles;
 	// runs the actual detection
 	//HoughCircles(src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
-	HoughCircles(hsv, circles, HOUGH_GRADIENT, 1, hsv.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
+	HoughCircles(src_display, circles, HOUGH_GRADIENT, 1, src_display.rows / 8, cannyThreshold, accumulatorThreshold, 0, 0);
 
 	// clone the colour, input image for displaying purposes
-	Mat display = hsv.clone();
+	Mat display = src_display.clone();
+	//Mat display = src_gray.clone();
+
 
 	for (size_t i = 0; i < circles.size(); i++)
 	{
@@ -53,27 +55,6 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
-
-	int iLowH = 0;
-	int iHighH = 179;
-
-	int iLowS = 108;
-	int iHighS = 239;
-
-	int iLowV = 164;
-	int iHighV = 255;
-
-	//Create trackbars in "Control" window
-	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
-	createTrackbar("HighH", "Control", &iHighH, 179);
-
-	createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
-	createTrackbar("HighS", "Control", &iHighS, 255);
-
-	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
-	createTrackbar("HighV", "Control", &iHighV, 255);
-
 	//declare and initialize both parameters that are subjects to change
 	int cannyThreshold = cannyThresholdInitialValue;
 	int accumulatorThreshold = accumulatorThresholdInitialValue;
@@ -82,9 +63,6 @@ int main(int argc, char** argv)
 	namedWindow(windowName, WINDOW_AUTOSIZE);
 	createTrackbar(cannyThresholdTrackbarName, windowName, &cannyThreshold, maxCannyThreshold);
 	createTrackbar(accumulatorThresholdTrackbarName, windowName, &accumulatorThreshold, maxAccumulatorThreshold);
-
-	int iLastX = -1;
-	int iLastY = -1;
 
 	//Capture a temporary image from the camera
 	Mat imgTmp;
@@ -99,67 +77,21 @@ int main(int argc, char** argv)
 
 		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
 
-
-
 		if (!bSuccess) //if not success, break loop
 		{
 			cout << "Cannot read a frame from video stream" << endl;
 			break;
 		}
 
-		Mat imgHSV;
-
-		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
-
-		Mat imgThresholded;
-
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
-
-																									  //morphological opening (removes small objects from the foreground)
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
-		//morphological closing (removes small holes from the foreground)
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-
 		// Convert it to gray
 		cvtColor(imgOriginal, src_gray, COLOR_BGR2GRAY);
+		//src_gray = imgOriginal.clone();
 
 		// Reduce the noise so we avoid false circle detection
 		GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
 
-		//Calculate the moments of the thresholded image
-		Moments oMoments = moments(imgThresholded);
-
-		double dM01 = oMoments.m01;
-		double dM10 = oMoments.m10;
-		double dArea = oMoments.m00;
-
-		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-		if (dArea > 10000)
-		{
-			//calculate the position of the ball
-			int posX = dM10 / dArea;
-			int posY = dM01 / dArea;
-
-			if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
-			{
-				//Draw a red line from the previous point to the current point
-				//line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
-			}
-
-			iLastX = posX;
-			iLastY = posY;
-		}
-
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
-
-		imgOriginal = imgOriginal + imgLines;
-		imshow("Original", imgOriginal); //show the original image
-
 		//runs the detection, and update the display
-		HoughDetection(src_gray, imgOriginal, imgThresholded,cannyThreshold, accumulatorThreshold);
+		HoughDetection(src_gray, imgOriginal, cannyThreshold, accumulatorThreshold);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
