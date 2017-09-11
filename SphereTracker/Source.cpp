@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 	Mat src, src_gray;
 
 	// Read the image
-	String imageName("board.jpg"); // by default
+	String imageName("Untitled.jpg"); // by default
 	if (argc > 1)
 	{
 		imageName = argv[1];
