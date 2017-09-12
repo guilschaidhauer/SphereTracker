@@ -5,6 +5,8 @@
 using namespace cv;
 using namespace std;
 
+RNG rng(12345);
+
 int main(int argc, char** argv)
 {
 	VideoCapture cap(0); //capture the video from webcam
@@ -20,10 +22,10 @@ int main(int argc, char** argv)
 	int iLowH = 0;
 	int iHighH = 179;
 
-	int iLowS = 108;
-	int iHighS = 239;
+	int iLowS = 0;
+	int iHighS = 141;
 
-	int iLowV = 164;
+	int iLowV = 253;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -46,13 +48,11 @@ int main(int argc, char** argv)
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
 
-
 	while (true)
 	{
 		Mat imgOriginal;
 
 		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
-
 
 
 		if (!bSuccess) //if not success, break loop
@@ -84,6 +84,7 @@ int main(int argc, char** argv)
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
 
+		/*
 		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
 		if (dArea > 10000)
 		{
@@ -100,11 +101,29 @@ int main(int argc, char** argv)
 			iLastX = posX;
 			iLastY = posY;
 		}
+		*/
 
 		imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
-		imgOriginal = imgOriginal + imgLines;
-		imshow("Original", imgOriginal); //show the original image
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchy;
+		findContours(imgThresholded, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
+		for (size_t i = 0; i< contours.size(); i++)
+		{
+			if (contours[i].size() > 150)
+			{
+				//Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+				Scalar color = Scalar(255, 0, 0);
+				drawContours(drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point());
+			}
+		}
+		namedWindow("Contours", WINDOW_AUTOSIZE);
+		imshow("Contours", drawing);
+
+		//imgOriginal = imgOriginal + imgLines;
+		//imshow("Original", imgOriginal); //show the original image
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
