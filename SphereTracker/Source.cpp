@@ -6,7 +6,21 @@ using namespace cv;
 using namespace std;
 
 Scalar red;
+float highestRadius;
 RNG rng(12345);
+
+float getHighestFloat(vector<float>* floats)
+{
+	float highestFloat = 0;
+
+	for (int i = 0; i < floats->size(); i++)
+	{
+		if (floats->at(i) > highestFloat)
+			highestFloat = floats->at(i);
+	}
+
+	return highestFloat;
+}
 
 int main(int argc, char** argv)
 {
@@ -64,14 +78,11 @@ int main(int argc, char** argv)
 		}
 
 		Mat imgHSV;
-
 		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 
 		Mat imgThresholded;
-
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image
-
-																									  //morphological opening (removes small objects from the foreground)
+		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image //morphological opening (removes small objects from the foreground)
+		
 		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
@@ -85,25 +96,6 @@ int main(int argc, char** argv)
 		double dM01 = oMoments.m01;
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
-
-		/*
-		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-		if (dArea > 10000)
-		{
-			//calculate the position of the ball
-			int posX = dM10 / dArea;
-			int posY = dM01 / dArea;
-
-			if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
-			{
-				//Draw a red line from the previous point to the current point
-				line(imgLines, Point(posX, posY), Point(iLastX, iLastY), Scalar(0, 0, 255), 2);
-			}
-
-			iLastX = posX;
-			iLastY = posY;
-		}
-		*/
 
 		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
@@ -123,11 +115,10 @@ int main(int argc, char** argv)
 				approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
 				boundRect[i] = boundingRect(Mat(contours_poly[i]));
 				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
-
-				cout << center[i].x << " || " << center[i].y << endl;
 			}
 		}
 
+		//highestRadius = getHighestFloat(&radius);
 
 		/// Draw polygonal contour + bonding rects + circles
 		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
@@ -135,34 +126,13 @@ int main(int argc, char** argv)
 		{
 			if (contours[i].size() > 100)
 			{
-				//rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
-				//circle(drawing, center[i], (int)radius[i], color, 2, 8, 0);
 				circle(imgOriginal, center[i], (int)radius[i], red, 4, 8, 0);
 				circle(imgOriginal, center[i], 5, red, -1);
-				//cv2.circle(frame, center, 5, (0, 0, 255), -1)
 			}
 		}
 
-		/*Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
-		for (size_t i = 0; i< contours.size(); i++)
-		{
-			if (contours[i].size() > 150)
-			{
-				//Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-				Scalar color = Scalar(255, 0, 0);
-				drawContours(drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point());
-
-				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
-			}
-		}*/
-
-		//cv::flip(drawing, drawing, 1);
-		//namedWindow("Contours", WINDOW_AUTOSIZE);
-		//imshow("Contours", drawing);
-
-		//imgOriginal = imgOriginal + imgLines;
 		cv::flip(imgOriginal, imgOriginal, 1);
-		imshow("Original", imgOriginal); //show the original image
+		imshow("Original", imgOriginal);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
