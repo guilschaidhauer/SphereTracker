@@ -19,13 +19,13 @@ int main(int argc, char** argv)
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	int iLowH = 0;
-	int iHighH = 179;
+	int iLowH = 22;
+	int iHighH = 156;
 
-	int iLowS = 0;
-	int iHighS = 141;
+	int iLowS = 30;
+	int iHighS = 255;
 
-	int iLowV = 253;
+	int iLowV = 203;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -103,13 +103,43 @@ int main(int argc, char** argv)
 		}
 		*/
 
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		findContours(imgThresholded, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
+		vector<vector<Point> > contours_poly(contours.size());
+		vector<Rect> boundRect(contours.size());
+		vector<Point2f>center(contours.size());
+		vector<float>radius(contours.size());
+
+		for (int i = 0; i < contours.size(); i++)
+		{
+			if (contours[i].size() > 150)
+			{
+				approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
+				boundRect[i] = boundingRect(Mat(contours_poly[i]));
+				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
+			}
+		}
+
+
+		/// Draw polygonal contour + bonding rects + circles
 		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
+		for (int i = 0; i< contours.size(); i++)
+		{
+			if (contours[i].size() > 150)
+			{
+				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+				drawContours(imgOriginal, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
+				//rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
+				//circle(drawing, center[i], (int)radius[i], color, 2, 8, 0);
+				circle(imgOriginal, center[i], (int)radius[i], color, 2, 8, 0);
+			}
+		}
+
+		/*Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
 		for (size_t i = 0; i< contours.size(); i++)
 		{
 			if (contours[i].size() > 150)
@@ -117,13 +147,18 @@ int main(int argc, char** argv)
 				//Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 				Scalar color = Scalar(255, 0, 0);
 				drawContours(drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point());
+
+				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
 			}
-		}
-		namedWindow("Contours", WINDOW_AUTOSIZE);
-		imshow("Contours", drawing);
+		}*/
+
+		//cv::flip(drawing, drawing, 1);
+		//namedWindow("Contours", WINDOW_AUTOSIZE);
+		//imshow("Contours", drawing);
 
 		//imgOriginal = imgOriginal + imgLines;
-		//imshow("Original", imgOriginal); //show the original image
+		cv::flip(imgOriginal, imgOriginal, 1);
+		imshow("Original", imgOriginal); //show the original image
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
