@@ -3,6 +3,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <vector>
 #include <time.h>
+#include <math.h>
 
 using namespace cv;
 using namespace std;
@@ -14,27 +15,33 @@ RNG generation(time(NULL));
 
 struct Circle
 {
-	Circle(Point2f center, int radius) : Center(center), Radius(radius) {}
+	Circle(Point2f center, int radius, float speed, Scalar color) : Center(center), Radius(radius), Speed(speed), Color(color) {}
 	int Radius;
 	Point2f Center;
+	float Speed;
+	Scalar Color;
 };
 
 //Points
 int points = 0;
 vector<Circle> activeCircles;
 time_t lastGenerationTime, currentTime;
-int minx = 10;
+int minx = 0;
 int maxx = 500;
+float minSpeed = 4;
+float maxSpeed = 8;
+bool gameOn = true;
 
 void generateCircle()
 {
-	activeCircles.push_back(Circle(Point2f(generation.uniform(minx, maxx), generation.uniform(0, 20)), 10));
+	Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+	activeCircles.push_back(Circle(Point2f(generation.uniform(minx, maxx), -generation.uniform(0, 20)), 10, generation.uniform(minSpeed, maxSpeed), color));
 }
 
 void initCircles()
 {
 	time(&lastGenerationTime);
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		generateCircle();
 	}
@@ -44,7 +51,7 @@ Mat drawCircles(Mat toDrawImage)
 {
 	for (int i = 0; i < activeCircles.size(); i++)
 	{
-		circle(toDrawImage, activeCircles[i].Center, activeCircles[i].Radius, red, 2, 8, 0);
+		circle(toDrawImage, activeCircles[i].Center, activeCircles[i].Radius, activeCircles[i].Color, 2, 8, 0);
 	}
 
 	return toDrawImage;
@@ -55,10 +62,13 @@ void generateCircles()
 	time(&currentTime);
 	// Time elapsed
 	double seconds = difftime(currentTime, lastGenerationTime);
-	
-	if (seconds > 2)
+	if (seconds > 1)
 	{
-
+		for (int i = 0; i < 4; i++)
+		{
+			generateCircle();
+		}
+		time(&lastGenerationTime);
 	}
 }
 
@@ -66,13 +76,45 @@ void moveCircles()
 {
 	for (int i = 0; i < activeCircles.size(); i++)
 	{
-		activeCircles[i].Center.y += 2;
+		activeCircles[i].Center.y += activeCircles[i].Speed;
 
-		if (activeCircles[i].Center.y > 800)
+		if (activeCircles[i].Center.y > 500)
 		{
 			activeCircles.erase(activeCircles.begin() + i);
+			cout << "Points: " << points << endl;
+			gameOn = false;
 		}
 	}
+}
+
+bool checkCollision(Circle x, Circle y)
+{
+	if (sqrt((y.Center.x - x.Center.x) * (y.Center.x - x.Center.x) + (y.Center.y - x.Center.y) * (y.Center.y - x.Center.y)) < (x.Radius + y.Radius))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void checkAndHandleCollisions(Circle mainCircle)
+{
+	vector<int> indexes;
+	for (int i = 0; i < activeCircles.size(); i++)
+	{
+		if (checkCollision(mainCircle, activeCircles[i]))
+		{
+			indexes.push_back(i);
+		}
+	}
+
+	for (int i = 0; i < indexes.size(); i++)
+	{
+		activeCircles.erase(activeCircles.begin() + indexes[i]);
+		points++;
+	}
+
+	//cout << points << endl;
 }
 
 int main(int argc, char** argv)
@@ -119,7 +161,7 @@ int main(int argc, char** argv)
 
 	initCircles();
 
-	while (true)
+	while (gameOn)
 	{
 		Mat imgOriginal;
 
@@ -173,7 +215,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-		//highestRadius = getHighestFloat(&radius);
 
 		/// Draw polygonal contour + bonding rects + circles
 		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
@@ -185,12 +226,14 @@ int main(int argc, char** argv)
 				circle(imgOriginal, center[i], 5, red, -1);
 
 				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-				circle(drawing, center[i], (int)radius[i]/2, color, 4, 8, 0);
+				circle(drawing, center[i], 20, color, 4, 8, 0);
+				checkAndHandleCollisions(Circle(center[i], (int)radius[i] / 2, 99, color));
 			}
 		}
 
 		drawing = drawCircles(drawing);
 		moveCircles();
+		generateCircles();
 
 		cv::flip(drawing, drawing, 1);
 		namedWindow("Contours", WINDOW_AUTOSIZE);
@@ -206,5 +249,6 @@ int main(int argc, char** argv)
 		}
 	}
 
+	system("pause");
 	return 0;
 }
