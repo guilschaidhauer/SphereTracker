@@ -1,6 +1,8 @@
 #include <iostream>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include <vector>
+#include <time.h>
 
 using namespace cv;
 using namespace std;
@@ -8,18 +10,69 @@ using namespace std;
 Scalar red;
 float highestRadius;
 RNG rng(12345);
+RNG generation(time(NULL));
 
-float getHighestFloat(vector<float>* floats)
+struct Circle
 {
-	float highestFloat = 0;
+	Circle(Point2f center, int radius) : Center(center), Radius(radius) {}
+	int Radius;
+	Point2f Center;
+};
 
-	for (int i = 0; i < floats->size(); i++)
+//Points
+int points = 0;
+vector<Circle> activeCircles;
+time_t lastGenerationTime, currentTime;
+int minx = 10;
+int maxx = 500;
+
+void generateCircle()
+{
+	activeCircles.push_back(Circle(Point2f(generation.uniform(minx, maxx), generation.uniform(0, 20)), 10));
+}
+
+void initCircles()
+{
+	time(&lastGenerationTime);
+	for (int i = 0; i < 5; i++)
 	{
-		if (floats->at(i) > highestFloat)
-			highestFloat = floats->at(i);
+		generateCircle();
+	}
+}
+
+Mat drawCircles(Mat toDrawImage)
+{
+	for (int i = 0; i < activeCircles.size(); i++)
+	{
+		circle(toDrawImage, activeCircles[i].Center, activeCircles[i].Radius, red, 2, 8, 0);
 	}
 
-	return highestFloat;
+	return toDrawImage;
+}
+
+void generateCircles()
+{
+	time(&currentTime);
+	// Time elapsed
+	double seconds = difftime(currentTime, lastGenerationTime);
+	
+	if (seconds > 2)
+	{
+
+	}
+}
+
+void moveCircles()
+{
+	for (int i = 0; i < activeCircles.size(); i++)
+	{
+		activeCircles[i].Center.y += 2;
+
+		if (activeCircles[i].Center.y > 800)
+		{
+			activeCircles.erase(activeCircles.begin() + i);
+		}
+	}
 }
 
 int main(int argc, char** argv)
@@ -63,6 +116,8 @@ int main(int argc, char** argv)
 
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
+
+	initCircles();
 
 	while (true)
 	{
@@ -134,12 +189,15 @@ int main(int argc, char** argv)
 			}
 		}
 
+		drawing = drawCircles(drawing);
+		moveCircles();
+
 		cv::flip(drawing, drawing, 1);
 		namedWindow("Contours", WINDOW_AUTOSIZE);
 		imshow("Contours", drawing);
 
-		cv::flip(imgOriginal, imgOriginal, 1);
-		imshow("Original", imgOriginal);
+		//cv::flip(imgOriginal, imgOriginal, 1);
+		//imshow("Original", imgOriginal);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
