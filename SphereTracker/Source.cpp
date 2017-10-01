@@ -35,13 +35,13 @@ int main(int argc, char** argv)
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	int iLowH = 22;
-	int iHighH = 156;
+	int iLowH = 12;
+	int iHighH = 96;
 
-	int iLowS = 30;
+	int iLowS = 47;
 	int iHighS = 255;
 
-	int iLowV = 203;
+	int iLowV = 190;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
 
-		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -128,8 +128,15 @@ int main(int argc, char** argv)
 			{
 				circle(imgOriginal, center[i], (int)radius[i], red, 4, 8, 0);
 				circle(imgOriginal, center[i], 5, red, -1);
+
+				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+				circle(drawing, center[i], (int)radius[i]/2, color, 4, 8, 0);
 			}
 		}
+
+		cv::flip(drawing, drawing, 1);
+		namedWindow("Contours", WINDOW_AUTOSIZE);
+		imshow("Contours", drawing);
 
 		cv::flip(imgOriginal, imgOriginal, 1);
 		imshow("Original", imgOriginal);
