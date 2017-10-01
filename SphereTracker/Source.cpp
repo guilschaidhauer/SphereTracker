@@ -26,11 +26,12 @@ struct Circle
 int points = 0;
 vector<Circle> activeCircles;
 time_t lastGenerationTime, currentTime;
-int minx = 0;
-int maxx = 500;
+int minx = 50;
+int maxx = 600;
 float minSpeed = 4;
 float maxSpeed = 8;
 bool gameOn = true;
+int toBeGenerated = 2;
 
 void generateCircle()
 {
@@ -41,10 +42,10 @@ void generateCircle()
 void initCircles()
 {
 	time(&lastGenerationTime);
-	for (int i = 0; i < 3; i++)
-	{
+	//for (int i = 0; i < 3; i++)
+	//{
 		generateCircle();
-	}
+	//}
 }
 
 Mat drawCircles(Mat toDrawImage)
@@ -64,7 +65,7 @@ void generateCircles()
 	double seconds = difftime(currentTime, lastGenerationTime);
 	if (seconds > 1)
 	{
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < toBeGenerated; i++)
 		{
 			generateCircle();
 		}
@@ -112,6 +113,26 @@ void checkAndHandleCollisions(Circle mainCircle)
 	{
 		activeCircles.erase(activeCircles.begin() + indexes[i]);
 		points++;
+	}
+
+	if (points > 5)
+	{
+		toBeGenerated = 4;
+	}
+	else if (points > 20)
+	{
+		toBeGenerated = 5;
+		minSpeed = 8;
+		maxSpeed = 12;
+	}
+	else if (points > 50)
+	{
+		toBeGenerated = 7;
+	}
+	else if (points > 100)
+	{
+		minSpeed = 10;
+		maxSpeed = 14;
 	}
 
 	//cout << points << endl;
@@ -194,7 +215,7 @@ int main(int argc, char** argv)
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
 
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
