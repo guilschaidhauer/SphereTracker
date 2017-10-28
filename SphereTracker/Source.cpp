@@ -141,23 +141,28 @@ void checkAndHandleCollisions(Circle mainCircle)
 int main(int argc, char** argv)
 {
 	red = Scalar(0, 0, 255);
-	VideoCapture cap(0); //capture the video from webcam
+
+	string filename = "video2.mp4";
+
+	VideoCapture cap(filename); //capture the video from webcam
+	//VideoCapture cap(0); //capture the video from webcam
 
 	if (!cap.isOpened())  // if not success, exit program
 	{
 		cout << "Cannot open the web cam" << endl;
+		system("pause");
 		return -1;
 	}
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	int iLowH = 18;
-	int iHighH = 119;
+	int iLowH = 16;
+	int iHighH = 40;
 
-	int iLowS = 47;
-	int iHighS = 255;
+	int iLowS = 54;
+	int iHighS = 252;
 	 
-	int iLowV = 154;
+	int iLowV = 169;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -252,13 +257,13 @@ int main(int argc, char** argv)
 			}
 		}
 
-		drawing = drawCircles(drawing);
+		//drawing = drawCircles(drawing);
 		//moveCircles();
-		generateCircles();
+		//generateCircles();
 
-		cv::flip(drawing, drawing, 1);
-		namedWindow("Contours", WINDOW_AUTOSIZE);
-		imshow("Contours", drawing);
+		//cv::flip(drawing, drawing, 1);
+		//namedWindow("Contours", WINDOW_AUTOSIZE);
+		//imshow("Contours", drawing);
 
 		cv::flip(imgOriginal, imgOriginal, 1);
 		imshow("Original", imgOriginal);
