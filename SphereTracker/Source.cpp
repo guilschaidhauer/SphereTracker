@@ -151,13 +151,13 @@ int main(int argc, char** argv)
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	int iLowH = 12;
-	int iHighH = 96;
+	int iLowH = 18;
+	int iHighH = 119;
 
 	int iLowS = 47;
 	int iHighS = 255;
-
-	int iLowV = 190;
+	 
+	int iLowV = 154;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
 		double dM10 = oMoments.m10;
 		double dArea = oMoments.m00;
 
-		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -253,15 +253,15 @@ int main(int argc, char** argv)
 		}
 
 		drawing = drawCircles(drawing);
-		moveCircles();
+		//moveCircles();
 		generateCircles();
 
 		cv::flip(drawing, drawing, 1);
 		namedWindow("Contours", WINDOW_AUTOSIZE);
 		imshow("Contours", drawing);
 
-		//cv::flip(imgOriginal, imgOriginal, 1);
-		//imshow("Original", imgOriginal);
+		cv::flip(imgOriginal, imgOriginal, 1);
+		imshow("Original", imgOriginal);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
