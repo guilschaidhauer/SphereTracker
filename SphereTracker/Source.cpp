@@ -33,6 +33,9 @@ float maxSpeed = 8;
 bool gameOn = true;
 int toBeGenerated = 2;
 
+
+float b, c;
+
 void generateCircle()
 {
 	Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
@@ -142,7 +145,7 @@ int main(int argc, char** argv)
 {
 	red = Scalar(0, 0, 255);
 
-	string filename = "video2.mp4";
+	string filename = "red.mp4";
 
 	VideoCapture cap(filename); //capture the video from webcam
 	//VideoCapture cap(0); //capture the video from webcam
@@ -156,13 +159,63 @@ int main(int argc, char** argv)
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	int iLowH = 16;
-	int iHighH = 40;
+	//Bright Room -> Light
+	//int iLowH = 16;
+	//int iHighH = 40;
 
-	int iLowS = 54;
-	int iHighS = 252;
-	 
-	int iLowV = 169;
+	//int iLowS = 54;
+	//int iHighS = 252;
+	// 
+	//int iLowV = 169;
+	//int iHighV = 255;
+
+	//Bright Room -> No Light
+	/*int iLowH = 23;
+	int iHighH = 71;
+
+	int iLowS = 42;
+	int iHighS = 255;
+
+	int iLowV = 108;
+	int iHighV = 255;*/
+
+	//Bright Room -> Red Light
+	//int iLowH = 9;
+	//int iHighH = 51	;
+
+	//int iLowS = 52;
+	//int iHighS = 255;
+
+	//int iLowV = 199;
+	//int iHighV = 255;
+
+	//int iLowH = 27;
+	//int iHighH = 67;
+
+	//int iLowS = 70;
+	//int iHighS = 255;
+
+	//int iLowV = 122;
+	//int iHighV = 251;
+
+	//Green
+	//int iLowH = 25;
+	//int iHighH = 87;
+
+	//int iLowS = 0;
+	//int iHighS = 203;
+
+	//int iLowV = 234;
+	//int iHighV = 255;
+
+	//Red
+	int iLowH = 12;
+	int iHighH = 76;
+
+	int iLowS = 87;
+	int iHighS = 255;
+
+	int iLowV = 106;
 	int iHighV = 255;
 
 	//Create trackbars in "Control" window
@@ -199,6 +252,9 @@ int main(int argc, char** argv)
 			cout << "Cannot read a frame from video stream" << endl;
 			break;
 		}
+
+		cv::flip(imgOriginal, imgOriginal, 1);
+		//imshow("Original", imgOriginal);
 
 		Mat imgHSV;
 		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
@@ -241,6 +297,8 @@ int main(int argc, char** argv)
 			}
 		}
 
+		b = 0;
+		c = 0;
 
 		/// Draw polygonal contour + bonding rects + circles
 		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
@@ -254,8 +312,14 @@ int main(int argc, char** argv)
 				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 				circle(drawing, center[i], 20, color, 4, 8, 0);
 				checkAndHandleCollisions(Circle(center[i], (int)radius[i] / 2, 99, color));
-			}
+
+				//cout << center[i].x << " | " << center[i].y << " | " << radius[i] << endl;
+				b = center[i].x;
+				c = center[i].y;
+			} 
 		}
+
+		cout << b << " | " << c << endl;
 
 		//drawing = drawCircles(drawing);
 		//moveCircles();
@@ -265,8 +329,8 @@ int main(int argc, char** argv)
 		//namedWindow("Contours", WINDOW_AUTOSIZE);
 		//imshow("Contours", drawing);
 
-		cv::flip(imgOriginal, imgOriginal, 1);
-		imshow("Original", imgOriginal);
+		//cv::flip(imgOriginal, imgOriginal, 1);
+		imshow("Circle", imgOriginal);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
@@ -274,7 +338,5 @@ int main(int argc, char** argv)
 			break;
 		}
 	}
-
-	system("pause");
 	return 0;
 }
