@@ -22,125 +22,6 @@ struct Circle
 	Scalar Color;
 };
 
-//Points
-int points = 0;
-vector<Circle> activeCircles;
-time_t lastGenerationTime, currentTime;
-int minx = 50;
-int maxx = 600;
-float minSpeed = 4;
-float maxSpeed = 8;
-bool gameOn = true;
-int toBeGenerated = 2;
-
-
-float b, c;
-
-void generateCircle()
-{
-	Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
-	activeCircles.push_back(Circle(Point2f(generation.uniform(minx, maxx), -generation.uniform(0, 20)), 10, generation.uniform(minSpeed, maxSpeed), color));
-}
-
-void initCircles()
-{
-	time(&lastGenerationTime);
-	//for (int i = 0; i < 3; i++)
-	//{
-		generateCircle();
-	//}
-}
-
-Mat drawCircles(Mat toDrawImage)
-{
-	for (int i = 0; i < activeCircles.size(); i++)
-	{
-		circle(toDrawImage, activeCircles[i].Center, activeCircles[i].Radius, activeCircles[i].Color, 2, 8, 0);
-	}
-
-	return toDrawImage;
-}
-
-void generateCircles()
-{
-	time(&currentTime);
-	// Time elapsed
-	double seconds = difftime(currentTime, lastGenerationTime);
-	if (seconds > 1)
-	{
-		for (int i = 0; i < toBeGenerated; i++)
-		{
-			generateCircle();
-		}
-		time(&lastGenerationTime);
-	}
-}
-
-void moveCircles()
-{
-	for (int i = 0; i < activeCircles.size(); i++)
-	{
-		activeCircles[i].Center.y += activeCircles[i].Speed;
-
-		if (activeCircles[i].Center.y > 500)
-		{
-			activeCircles.erase(activeCircles.begin() + i);
-			cout << "Points: " << points << endl;
-			gameOn = false;
-		}
-	}
-}
-
-bool checkCollision(Circle x, Circle y)
-{
-	if (sqrt((y.Center.x - x.Center.x) * (y.Center.x - x.Center.x) + (y.Center.y - x.Center.y) * (y.Center.y - x.Center.y)) < (x.Radius + y.Radius))
-	{
-		return true;
-	}
-
-	return false;
-}
-
-void checkAndHandleCollisions(Circle mainCircle)
-{
-	vector<int> indexes;
-	for (int i = 0; i < activeCircles.size(); i++)
-	{
-		if (checkCollision(mainCircle, activeCircles[i]))
-		{
-			indexes.push_back(i);
-		}
-	}
-
-	for (int i = 0; i < indexes.size(); i++)
-	{
-		activeCircles.erase(activeCircles.begin() + indexes[i]);
-		points++;
-	}
-
-	if (points > 5)
-	{
-		toBeGenerated = 4;
-	}
-	else if (points > 20)
-	{
-		toBeGenerated = 5;
-		minSpeed = 8;
-		maxSpeed = 12;
-	}
-	else if (points > 50)
-	{
-		toBeGenerated = 7;
-	}
-	else if (points > 100)
-	{
-		minSpeed = 10;
-		maxSpeed = 14;
-	}
-
-	//cout << points << endl;
-}
-
 int main(int argc, char** argv)
 {
 	red = Scalar(0, 0, 255);
@@ -158,45 +39,6 @@ int main(int argc, char** argv)
 	}
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
-
-	//Bright Room -> Light
-	//int iLowH = 16;
-	//int iHighH = 40;
-
-	//int iLowS = 54;
-	//int iHighS = 252;
-	// 
-	//int iLowV = 169;
-	//int iHighV = 255;
-
-	//Bright Room -> No Light
-	/*int iLowH = 23;
-	int iHighH = 71;
-
-	int iLowS = 42;
-	int iHighS = 255;
-
-	int iLowV = 108;
-	int iHighV = 255;*/
-
-	//Bright Room -> Red Light
-	//int iLowH = 9;
-	//int iHighH = 51	;
-
-	//int iLowS = 52;
-	//int iHighS = 255;
-
-	//int iLowV = 199;
-	//int iHighV = 255;
-
-	//int iLowH = 27;
-	//int iHighH = 67;
-
-	//int iLowS = 70;
-	//int iHighS = 255;
-
-	//int iLowV = 122;
-	//int iHighV = 251;
 
 	//Green
 	//int iLowH = 37;
@@ -218,16 +60,6 @@ int main(int argc, char** argv)
 	int iLowV = 229;
 	int iHighV = 255;
 
-	//Red
-	//int iLowH = 12;
-	//int iHighH = 76;
-
-	//int iLowS = 87;
-	//int iHighS = 255;
-
-	//int iLowV = 106;
-	//int iHighV = 255;
-
 	//Create trackbars in "Control" window
 	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
 	createTrackbar("HighH", "Control", &iHighH, 179);
@@ -248,9 +80,7 @@ int main(int argc, char** argv)
 	//Create a black image with the size as the camera output
 	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
 
-	initCircles();
-
-	while (gameOn)
+	while (true)
 	{
 		Mat imgOriginal;
 
@@ -307,9 +137,6 @@ int main(int argc, char** argv)
 			}
 		}
 
-		b = 0;
-		c = 0;
-
 		/// Draw polygonal contour + bonding rects + circles
 		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
 		for (int i = 0; i< contours.size(); i++)
@@ -321,15 +148,8 @@ int main(int argc, char** argv)
 
 				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 				circle(drawing, center[i], 20, color, 4, 8, 0);
-				checkAndHandleCollisions(Circle(center[i], (int)radius[i] / 2, 99, color));
-
-				//cout << center[i].x << " | " << center[i].y << " | " << radius[i] << endl;
-				b = center[i].x;
-				c = center[i].y;
 			} 
 		}
-
-		cout << b << " | " << c << endl;
 
 		//drawing = drawCircles(drawing);
 		//moveCircles();
