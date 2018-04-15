@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 {
 	red = Scalar(0, 0, 255);
 
-	string filename = "red.mp4";
+	string filename = "multicolor.mp4";
 
 	VideoCapture cap(filename); //capture the video from webcam
 	//VideoCapture cap(0); //capture the video from webcam
@@ -199,24 +199,34 @@ int main(int argc, char** argv)
 	//int iHighV = 251;
 
 	//Green
-	//int iLowH = 25;
-	//int iHighH = 87;
+	//int iLowH = 37;
+	//int iHighH = 88;
 
-	//int iLowS = 0;
-	//int iHighS = 203;
+	//int iLowS = 47;
+	//int iHighS = 255;
 
-	//int iLowV = 234;
+	//int iLowV = 232;
 	//int iHighV = 255;
 
-	//Red
-	int iLowH = 12;
-	int iHighH = 76;
+	//Yellow
+	int iLowH = 23;
+	int iHighH = 38;
 
-	int iLowS = 87;
+	int iLowS = 52;
 	int iHighS = 255;
 
-	int iLowV = 106;
+	int iLowV = 229;
 	int iHighV = 255;
+
+	//Red
+	//int iLowH = 12;
+	//int iHighH = 76;
+
+	//int iLowS = 87;
+	//int iHighS = 255;
+
+	//int iLowV = 106;
+	//int iHighV = 255;
 
 	//Create trackbars in "Control" window
 	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
@@ -289,7 +299,7 @@ int main(int argc, char** argv)
 
 		for (int i = 0; i < contours.size(); i++)
 		{
-			if (contours[i].size() > 100)
+			if (contours[i].size() > 5)
 			{
 				approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
 				boundRect[i] = boundingRect(Mat(contours_poly[i]));
