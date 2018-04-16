@@ -40,35 +40,35 @@ int main(int argc, char** argv)
 
 	namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
 
-	//Green
-	//int iLowH = 37;
-	//int iHighH = 88;
-
-	//int iLowS = 47;
-	//int iHighS = 255;
-
-	//int iLowV = 232;
-	//int iHighV = 255;
-
 	//Yellow
-	int iLowH = 23;
-	int iHighH = 38;
+	int iLowH_1 = 23;
+	int iHighH_1 = 38;
 
-	int iLowS = 52;
-	int iHighS = 255;
+	int iLowS_1 = 52;
+	int iHighS_1 = 255;
 
-	int iLowV = 229;
-	int iHighV = 255;
+	int iLowV_1 = 229;
+	int iHighV_1 = 255;
+
+	//Green
+	int iLowH_2 = 37;
+	int iHighH_2 = 88;
+
+	int iLowS_2 = 47;
+	int iHighS_2 = 255;
+
+	int iLowV_2 = 232;
+	int iHighV_2 = 255;
 
 	//Create trackbars in "Control" window
-	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
-	createTrackbar("HighH", "Control", &iHighH, 179);
+	createTrackbar("LowH", "Control", &iLowH_1, 179); //Hue (0 - 179)
+	createTrackbar("HighH", "Control", &iHighH_1, 179);
 
-	createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
-	createTrackbar("HighS", "Control", &iHighS, 255);
+	createTrackbar("LowS", "Control", &iLowS_1, 255); //Saturation (0 - 255)
+	createTrackbar("HighS", "Control", &iHighS_1, 255);
 
-	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
-	createTrackbar("HighV", "Control", &iHighV, 255);
+	createTrackbar("LowV", "Control", &iLowV_1, 255);//Value (0 - 255)
+	createTrackbar("HighV", "Control", &iHighV_1, 255);
 
 	int iLastX = -1;
 	int iLastY = -1;
@@ -78,49 +78,46 @@ int main(int argc, char** argv)
 	cap.read(imgTmp);
 
 	//Create a black image with the size as the camera output
-	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);;
+	Mat imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
 
 	while (true)
 	{
-		Mat imgOriginal;
+		Mat imgOriginal1, imgOriginal2;
+		
+		bool bSuccess_1 = cap.read(imgOriginal1); // read a new frame from video
 
-		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
-
-
-		if (!bSuccess) //if not success, break loop
+		if (!bSuccess_1) //if not success, break loop
 		{
 			cout << "Cannot read a frame from video stream" << endl;
 			break;
 		}
 
-		cv::flip(imgOriginal, imgOriginal, 1);
+		cv::flip(imgOriginal1, imgOriginal1, 1);
 		//imshow("Original", imgOriginal);
+		imgOriginal2 = imgOriginal1.clone();
 
-		Mat imgHSV;
-		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+		Mat imgHSV_1, imgHSV_2;
+		cvtColor(imgOriginal1, imgHSV_1, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+		cvtColor(imgOriginal2, imgHSV_2, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 
-		Mat imgThresholded;
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //Threshold the image //morphological opening (removes small objects from the foreground)
-		
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		////////////
+
+		Mat imgThresholded_1;
+		inRange(imgHSV_1, Scalar(iLowH_1, iLowS_1, iLowV_1), Scalar(iHighH_1, iHighS_1, iHighV_1), imgThresholded_1); //Threshold the image //morphological opening (removes small objects from the foreground)
+				
+		erode(imgThresholded_1, imgThresholded_1, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgThresholded_1, imgThresholded_1, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
 		//morphological closing (removes small holes from the foreground)
-		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgThresholded_1, imgThresholded_1, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		erode(imgThresholded_1, imgThresholded_1, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
-		//Calculate the moments of the thresholded image
-		Moments oMoments = moments(imgThresholded);
-
-		double dM01 = oMoments.m01;
-		double dM10 = oMoments.m10;
-		double dArea = oMoments.m00;
-
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image 1", imgThresholded_1); //show the thresholded image
+		//imshow("Thresholded Image 2", imgThresholded_2); //show the thresholded image
 
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-		findContours(imgThresholded, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+		findContours(imgThresholded_1, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
 		vector<vector<Point> > contours_poly(contours.size());
 		vector<Rect> boundRect(contours.size());
@@ -138,29 +135,72 @@ int main(int argc, char** argv)
 		}
 
 		/// Draw polygonal contour + bonding rects + circles
-		Mat drawing = Mat::zeros(imgThresholded.size(), CV_8UC3);
+		Mat drawing = Mat::zeros(imgThresholded_1.size(), CV_8UC3);
 		for (int i = 0; i< contours.size(); i++)
 		{
 			if (contours[i].size() > 100)
 			{
-				circle(imgOriginal, center[i], (int)radius[i], red, 4, 8, 0);
-				circle(imgOriginal, center[i], 5, red, -1);
+				circle(imgOriginal1, center[i], (int)radius[i], red, 4, 8, 0);
+				circle(imgOriginal1, center[i], 5, red, -1);
 
 				Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 				circle(drawing, center[i], 20, color, 4, 8, 0);
-			} 
+			}
 		}
 
-		//drawing = drawCircles(drawing);
-		//moveCircles();
-		//generateCircles();
+		////////////
 
-		//cv::flip(drawing, drawing, 1);
-		//namedWindow("Contours", WINDOW_AUTOSIZE);
-		//imshow("Contours", drawing);
+		Mat imgThresholded_2;
+		inRange(imgHSV_2, Scalar(iLowH_2, iLowS_2, iLowV_2), Scalar(iHighH_2, iHighS_2, iHighV_2), imgThresholded_2); //Threshold the image //morphological opening (removes small objects from the foreground)
 
-		//cv::flip(imgOriginal, imgOriginal, 1);
-		imshow("Circle", imgOriginal);
+		erode(imgThresholded_2, imgThresholded_2, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgThresholded_2, imgThresholded_2, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+		//morphological closing (removes small holes from the foreground)
+		dilate(imgThresholded_2, imgThresholded_2, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		erode(imgThresholded_2, imgThresholded_2, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+		//imshow("Thresholded Image 1", imgThresholded_1); //show the thresholded image
+		//imshow("Thresholded Image 2", imgThresholded_2); //show the thresholded image
+
+		vector<vector<Point> > contours2;
+		vector<Vec4i> hierarchy2;
+		findContours(imgThresholded_2, contours2, hierarchy2, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+		vector<vector<Point> > contours_poly2(contours2.size());
+		vector<Rect> boundRect2(contours2.size());
+		vector<Point2f>center2(contours2.size());
+		vector<float>radius2(contours2.size());
+
+		for (int i = 0; i < contours2.size(); i++)
+		{
+			if (contours2[i].size() > 5)
+			{
+				approxPolyDP(Mat(contours2[i]), contours_poly2[i], 3, true);
+				boundRect2[i] = boundingRect(Mat(contours_poly2[i]));
+				minEnclosingCircle((Mat)contours_poly2[i], center2[i], radius2[i]);
+			}
+		}
+
+		/// Draw polygonal contour + bonding rects + circles
+		Mat drawing2 = Mat::zeros(imgThresholded_2.size(), CV_8UC3);
+		for (int i = 0; i< contours2.size(); i++)
+		{
+			if (contours2[i].size() > 100)
+			{
+				circle(imgOriginal2, center2[i], (int)radius2[i], red, 4, 8, 0);
+				circle(imgOriginal2, center2[i], 5, red, -1);
+
+				Scalar color2 = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
+				circle(drawing, center2[i], 20, color2, 4, 8, 0);
+			}
+		}
+
+
+		////////////
+
+		imshow("Circle 1", imgOriginal1);
+		imshow("Circle 2", imgOriginal2);
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
